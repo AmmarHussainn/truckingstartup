@@ -297,7 +297,7 @@ const Mainform = () => {
         </div>
 
 
-        <div className='mt-10'>
+        {/* <div className='mt-10'>
           <h3 className='text-2xl font-bold text-blue-800 mb-6'>Stored Data</h3>
           <div className='overflow-x-auto'>
             <table className='w-full border-collapse'>
@@ -322,7 +322,7 @@ const Mainform = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </div> */}
 
        
       </div>
