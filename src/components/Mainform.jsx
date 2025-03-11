@@ -60,100 +60,95 @@ const Mainform = () => {
     return () => clearInterval(interval); // Cleanup function
   }, []);
 
-  // Handle input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    // Clear errors when user starts typing
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: '',
+ // Function to format phone input dynamically
+ const formatPhoneNumber = (input) => {
+  const cleaned = input.replace(/\D/g, ''); // Remove non-numeric characters
+
+  if (cleaned.length <= 3) return cleaned;
+  if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+  return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+};
+
+// Function to convert phone to international format before sending
+const normalizePhoneNumber = (input) => {
+  const cleaned = input.replace(/\D/g, ''); // Remove non-numeric characters
+  return cleaned.length === 10 ? `+1${cleaned}` : `+${cleaned}`; // Add country code if needed
+};
+
+// Handle input changes
+const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  if (name === 'phone') {
+    setFormData({ ...formData, [name]: formatPhoneNumber(value) }); // Format as user types
+  } else {
+    setFormData({ ...formData, [name]: value });
+  }
+
+  if (errors[name]) {
+    setErrors({ ...errors, [name]: '' });
+  }
+};
+
+// Handle form submission
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+
+  const normalizedPhone = normalizePhoneNumber(formData.phone);
+
+  const payload = {
+    ...formData,
+    phone: normalizedPhone,
+  };
+
+  try {
+    const response = await axios.post(
+      'https://trucking-startup.onrender.com/api/form',
+      payload,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (response.status === 201) {
+      setSubmitSuccess(true);
+      setFormData({
+        mc_mx_ff_number: '',
+        legal_name: '',
+        physical_address: '',
+        phone: '',
       });
     }
-  };
+    console.log('Response:', response);
+  } catch (error) {
+    console.log('Error:', error);
 
-  // Validate the form
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.mc_mx_ff_number)
-      newErrors.mc_mx_ff_number = 'MC/MX/FF Number is required';
-    if (!formData.legal_name) newErrors.legal_name = 'Legal Name is required';
-    if (!formData.physical_address)
-      newErrors.physical_address = 'Physical Address is required';
-    if (!formData.phone) {
-      newErrors.phone = 'Phone is required';
-    } else if (!/^\+?\d{10,15}$/.test(formData.phone)) {
-      newErrors.phone =
-        'Phone number must be in international format (e.g., +13362467441)';
-    }
-    return newErrors;
-  };
+    if (error.response) {
+        // Log response data for debugging
+        console.log('Response Data:', error.response.data);
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
+        // Extract error message safely
+        const errorMessage = error.response.data?.error || 'Failed to submit form. Please try again.';
 
-    setIsSubmitting(true);
-    try {
-      const normalizedPhone = formData.phone.replace(/[^\d+]/g, ''); // Normalize phone number
-      const payload = {
-        ...formData,
-        phone: normalizedPhone,
-      };
-
-      console.log('Submitting form data:', payload); // Log the payload
-      const response = await axios.post(
-        'https://trucking-startup.onrender.com/api/form',
-        payload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        if (errorMessage.includes('MC/MX/FF number or phone already exists')) {
+            setErrors({ ...errors, submit: 'This MC/MX/FF number or phone is already registered.' });
+        } else {
+            setErrors({ ...errors, submit: errorMessage });
         }
-      );
-
-      if (response.status === 201) {
-        setSubmitSuccess(true);
-        setFormData({
-          mc_mx_ff_number: '',
-          legal_name: '',
-          physical_address: '',
-          phone: '',
-        });
-        const fetchResponse = await axios.get(
-          'https://trucking-startup.onrender.com/api/form'
-        );
-        setStoredData(fetchResponse.data);
-      }
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
-        setErrors({
-          ...errors,
-          submit:
-            error.response.data.message ||
-            'Failed to submit form. Please try again.',
-        });
-      } else {
-        setErrors({
-          ...errors,
-          submit: 'Failed to submit form. Please try again.',
-        });
-      }
-    } finally {
-      setIsSubmitting(false);
+    } else if (error.request) {
+        // Request was made but no response received
+        console.log('No response received:', error.request);
+        setErrors({ ...errors, submit: 'No response from server. Please check your connection.' });
+    } else {
+        // Other unexpected errors
+        console.log('Unexpected Error:', error.message);
+        setErrors({ ...errors, submit: 'Something went wrong. Please try again later.' });
     }
-  };
+} finally {
+    setIsSubmitting(false);
+}
+
+};
+
 
   return (
     <div className='min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-50 to-gray-100'>
@@ -281,7 +276,7 @@ const Mainform = () => {
         <div className='mt-10 grid grid-cols-1 md:grid-cols-2 gap-6'>
           <div className='bg-white p-6 rounded-xl shadow-lg'>
             <h3 className='text-xl font-bold text-blue-800 mb-4'>
-              {console.log('enter', entriesByDate)}
+             
               Entries for {entriesByDate.date}
             </h3>
             <p className='text-gray-700'>
@@ -297,7 +292,20 @@ const Mainform = () => {
         </div>
 
 
-        {/* <div className='mt-10'>
+      
+       
+      </div>
+    </div>
+  );
+};
+
+export default Mainform;
+
+
+
+
+
+  {/* <div className='mt-10'>
           <h3 className='text-2xl font-bold text-blue-800 mb-6'>Stored Data</h3>
           <div className='overflow-x-auto'>
             <table className='w-full border-collapse'>
@@ -323,11 +331,3 @@ const Mainform = () => {
             </table>
           </div>
         </div> */}
-
-       
-      </div>
-    </div>
-  );
-};
-
-export default Mainform;
