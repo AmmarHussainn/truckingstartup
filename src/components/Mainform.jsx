@@ -28,10 +28,14 @@ const Mainform = () => {
         console.error('Error fetching data:', error);
       }
     };
-    fetchData();
+  
+    fetchData(); // Initial fetch
+    const interval = setInterval(fetchData, 5000); // Fetch data every 5 seconds
+  
+    return () => clearInterval(interval); // Cleanup on unmount
   }, []);
+  
 
-  // Fetch entries by date and total entries
   useEffect(() => {
     const fetchAdditionalData = async () => {
       try {
@@ -40,15 +44,20 @@ const Mainform = () => {
           date: currentDate,
         });
         setEntriesByDate(entriesResponse.data);
-
+  
         const totalEntriesResponse = await axios.get('https://trucking-startup.onrender.com/api/form/total-entries');
         setTotalEntries(totalEntriesResponse.data.totalEntries);
-        console.log('totalEntriesResponse', totalEntriesResponse.data.totalEntries);
       } catch (error) {
         console.error('Error fetching additional data:', error);
       }
     };
-    fetchAdditionalData();
+  
+    fetchAdditionalData(); // Initial Fetch
+  
+    // Fetch entries by date and total entries every 5 seconds
+    const interval = setInterval(fetchAdditionalData, 5000);
+  
+    return () => clearInterval(interval); // Cleanup function
   }, []);
 
   // Handle input changes
